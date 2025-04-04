@@ -30,3 +30,5 @@ src/
 1. EggHuntGame.sol // Main game contract managing the egg hunt lifecycle and minting process.
 2. EggVault.sol // Vault contract for securely storing deposited Egg NFTs.
 3. EggstravaganzaNFT.sol // ERC721-style NFT contract for minting unique Egg NFTs.
+
+- EggstravaganzaNFT.sol (done)

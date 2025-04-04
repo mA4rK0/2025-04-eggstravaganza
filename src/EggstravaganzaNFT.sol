@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
+// @audit-info floating pragmas
 pragma solidity ^0.8.23;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
@@ -19,6 +20,7 @@ contract EggstravaganzaNFT is ERC721, Ownable {
     /// @notice Only the owner can set the game contract allowed to mint eggs.
     function setGameContract(address _gameContract) external onlyOwner {
         require(_gameContract != address(0), "Invalid game contract address");
+        // @audit-low missing event logging
         gameContract = _gameContract;
     }
 
@@ -27,6 +29,7 @@ contract EggstravaganzaNFT is ERC721, Ownable {
     function mintEgg(address to, uint256 tokenId) external returns (bool) {
         require(msg.sender == gameContract, "Unauthorized minter");
         _mint(to, tokenId);
+        // @audit-low missing event logging
         totalSupply += 1;
         return true;
     }

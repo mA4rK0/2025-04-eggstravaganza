@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
+// @audit-info floating pragmas
 pragma solidity ^0.8.23;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
