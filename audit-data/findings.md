@@ -12,13 +12,12 @@
 
 ### [L-1] Missing Event Logging, become difficult when debugging and monitoring
 
-**Description:** The contract lacks event emission for critical state changes, such as when the `EggstravaganzaNFT::gameContract` variable is updated and when a new NFT is printed. Events are essential for tracking contract activity, debugging, and off-chain indexing.
+**Description:** The contract lacks event emission for critical state changes. Events are essential for tracking contract activity, debugging, and off-chain indexing.
 
 **Impact:**
 
 1. Debugging and monitoring become difficult without transaction logs
 2. Reduced transparency and observability in contract execution
-3. External applications (such as dApps, off-chain services) cannot track when `EggstravaganzaNFT::gameContract` variable is updated or when an NFT is minted.
 
 More reference: https://solodit.cyfrin.io/issues/hal-03-lack-of-event-emission-halborn-superhedge-superhedge-v1-core-markdown
 
@@ -47,7 +46,19 @@ More reference: https://solodit.cyfrin.io/issues/hal-03-lack-of-event-emission-h
     }
 ```
 
+3. The `EggVault::setEggNFT` function set the NFT contract address without emitting an event:
+
+```javascript
+    /// @notice Set the NFT contract address.
+    function setEggNFT(address _eggNFTAddress) external onlyOwner {
+        require(_eggNFTAddress != address(0), "Invalid NFT address");
+@>      eggNFT = EggstravaganzaNFT(_eggNFTAddress);
+    }
+```
+
 **Recommended Mitigation:** Introduce event logging for critical state changes to improve contract transparency and traceability. Modify the functions to emit these events and add the following event declarations:
+
+1. EggstravaganzaNFT.sol:
 
 ```diff
 +   event GameContractUpdated(address indexed newGameContract);
@@ -73,6 +84,19 @@ More reference: https://solodit.cyfrin.io/issues/hal-03-lack-of-event-emission-h
 -   }
 +       emit EggMinted(to, tokenId);
 +       return true;
++   }
+```
+
+2. EggVault.sol:
+
+```diff
++   event EggNFTSet(address indexed newEggNFT);
+    /// @notice Set the NFT contract address.
+    function setEggNFT(address _eggNFTAddress) external onlyOwner {
+        require(_eggNFTAddress != address(0), "Invalid NFT address");
+        eggNFT = EggstravaganzaNFT(_eggNFTAddress);
+-   }
++       emit EggNFTSet(_eggNFTAddress);
 +   }
 ```
 

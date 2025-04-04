@@ -22,6 +22,7 @@ contract EggVault is Ownable {
     /// @notice Set the NFT contract address.
     function setEggNFT(address _eggNFTAddress) external onlyOwner {
         require(_eggNFTAddress != address(0), "Invalid NFT address");
+        // @audit-low missing event logging
         eggNFT = EggstravaganzaNFT(_eggNFTAddress);
     }
 
