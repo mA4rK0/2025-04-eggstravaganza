@@ -16,7 +16,6 @@ contract EggGameTest is Test {
 
     error OwnableUnauthorizedAccount(address account);
 
-
     function setUp() public {
         owner = address(this); // The test contract is the deployer/owner.
         alice = address(0x1);

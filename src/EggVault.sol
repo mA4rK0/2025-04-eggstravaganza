@@ -17,7 +17,7 @@ contract EggVault is Ownable {
     event EggDeposited(address indexed depositor, uint256 tokenId);
     event EggWithdrawn(address indexed withdrawer, uint256 tokenId);
 
-    constructor()Ownable(msg.sender){}
+    constructor() Ownable(msg.sender) {}
 
     /// @notice Set the NFT contract address.
     function setEggNFT(address _eggNFTAddress) external onlyOwner {
@@ -37,13 +37,13 @@ contract EggVault is Ownable {
         eggDepositors[tokenId] = depositor;
         emit EggDeposited(depositor, tokenId);
     }
-    
+
     /// @notice Allows the depositor to withdraw their egg from the vault.
     // @audit-gas public functions not used internally could be marked external
     function withdrawEgg(uint256 tokenId) public {
         require(storedEggs[tokenId], "Egg not in vault");
         require(eggDepositors[tokenId] == msg.sender, "Not the original depositor");
-        
+
         storedEggs[tokenId] = false;
         delete eggDepositors[tokenId];
 
@@ -57,4 +57,3 @@ contract EggVault is Ownable {
         return storedEggs[tokenId];
     }
 }
-
