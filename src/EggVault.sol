@@ -28,8 +28,10 @@ contract EggVault is Ownable {
 
     /// @notice Records the deposit of an egg (NFT).
     /// The NFT must already have been transferred to the vault.
+    // @audit-gas public functions not used internally could be marked external
     function depositEgg(uint256 tokenId, address depositor) public {
         require(eggNFT.ownerOf(tokenId) == address(this), "NFT not transferred to vault");
+        // @audit-high There is no ownership check on this function, anyone can call the function
         require(!storedEggs[tokenId], "Egg already deposited");
         storedEggs[tokenId] = true;
         eggDepositors[tokenId] = depositor;
@@ -37,6 +39,7 @@ contract EggVault is Ownable {
     }
     
     /// @notice Allows the depositor to withdraw their egg from the vault.
+    // @audit-gas public functions not used internally could be marked external
     function withdrawEgg(uint256 tokenId) public {
         require(storedEggs[tokenId], "Egg not in vault");
         require(eggDepositors[tokenId] == msg.sender, "Not the original depositor");
@@ -49,6 +52,7 @@ contract EggVault is Ownable {
     }
 
     /// @notice Checks if a specific egg is currently deposited.
+    // @audit-gas public functions not used internally could be marked external
     function isEggDeposited(uint256 tokenId) public view returns (bool) {
         return storedEggs[tokenId];
     }
