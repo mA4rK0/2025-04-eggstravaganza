@@ -1,6 +1,6 @@
 # High
 
-### [H-1] There is no ownership check on `EggVault::depositEgg` function, anyone can call the function
+### [H-1] There is no ownership check on `EggVault::depositEgg` function, anyone can call the function (Submitted)
 
 **Description:** The `EggVault::depositEgg` function has no checking system for a depositor, allowing anyone to call this function without ensuring that the `depositor` is the rightful owner of the `tokenId`.
 
@@ -19,7 +19,7 @@
 
 Add the following code to the `EggHuntGameTest.t.sol` file.
 
-```javascript
+```Solidity
     function test_Attacker_Steals_Egg_FromVault() public {
         vm.prank(address(game));
         nft.mintEgg(address(vault), 999);
@@ -57,9 +57,115 @@ Add the following code to the `EggHuntGameTest.t.sol` file.
 - Likelihood: MEDIUM
 - Severity: HIGH
 
+### [H-2] Weak Randomness in `random` value generated inside `EggHuntGame::searchForEgg`, allows anyone to find eggs very quickly (submitted)
+
+**Description:** Hashing `msg.sender`, `block.timestamp`, `block.prevrandao` together creates a predictable final number. A predictable number is not a good random number.
+
+**Impact:** Malicious users can manipulate these values or know them in advance to find the eggs.
+
+**Proof of Concept:** Validators can know ahead of time the `block.timestamp` and `block.prevrandao` and use that knowledge to predict when / how to participate. See the [solidity blog on prevrando](https://soliditydeveloper.com/prevrandao) here.
+
+**Recommended Mitigation:** Consider using an oracle for your randomness like [Chainlink VRF](https://docs.chain.link/vrf/v2/introduction).
+
+### Likelihood & Impact:
+
+- Impact: HIGH
+- Likelihood: MEDIUM
+- Severity: HIGH
+
+# Medium
+
+### [M-1] Unused Return Value from External Call May Cause Logic Inconsistencies (Submitted)
+
+**Description:** In the `EggHuntGame::searchForEgg` function, the return value from the external call to `eggNFT::mintEgg` is ignored. The function is defined to return a bool, indicating whether the minting was successful. However, this value is not used, and the contract proceeds to update state variables such as `eggCounter` and `eggsFound[msg.sender]` regardless of the minting outcome. Ignoring return values from external contract calls can lead to inconsistencies in contract state and potential failure to meet functional expectations.
+
+**Impact:** If `eggNFT::mintEgg` fails and returns `false`, the contract will still increment `eggCounter` and increase the `eggsFound` count, even though the NFT was not successfully minted. This creates a mismatch between the recorded egg count and the actual minted NFTs, potentially leading to incorrect user balances, broken logic in later parts of the system, or even exploitable conditions if those inconsistencies are used as assumptions elsewhere in the contract.
+
+**Proof of Concept:**
+
+<details>
+<summary>Proof of Code</summary>
+Place the following test into `EggHuntGameTest.t.sol`.
+
+```Solidity
+interface IEggNFT {
+    function mintEgg(address to, uint256 tokenId) external returns (bool);
+}
+.
+.
+.
+contract EggGameTest is Test {
+    EggstravaganzaNFT nft;
+    EggVault vault;
+    EggHuntGame game;
+    address owner;
+    address alice;
+    address bob;
+    address mockNFT = address(0x3);
+
+    error OwnableUnauthorizedAccount(address account);
+.
+.
+.
+    function test_UncheckedReturnValue_ShouldNotUpdateStateIfMintFails() public {
+        EggHuntGame exploitableGame = new EggHuntGame(mockNFT, address(vault));
+
+        vm.mockCall(
+            mockNFT,
+            abi.encodeWithSelector(IEggNFT.mintEgg.selector, alice, 1),
+            abi.encode(false)
+        );
+
+        exploitableGame.setEggFindThreshold(100);
+        vm.prank(owner);
+        exploitableGame.startGame(100);
+
+        vm.warp(block.timestamp + 10);
+        vm.prank(alice);
+        exploitableGame.searchForEgg();
+
+        // We expect eggCounter to increment, even though mint failed
+        // state was updated despite mint failure
+        assertEq(exploitableGame.eggCounter(), 1);
+        assertEq(exploitableGame.eggsFound(alice), 1);
+    }
+}
+```
+
+</details>
+
+**Recommended Mitigation:** Always check the return value of external calls that indicate success or failure. In this case, ensure the `mintEgg` call returns `true`.
+
+```diff
+    function searchForEgg() external {
+        require(gameActive, "Game not active");
+        require(block.timestamp >= startTime, "Game not started yet");
+        require(block.timestamp <= endTime, "Game ended");
+
+        // Pseudo-random number generation (for demonstration purposes only)
+        uint256 random =
+            uint256(keccak256(abi.encodePacked(block.timestamp, block.prevrandao, msg.sender, eggCounter))) % 100;
+
+        if (random < eggFindThreshold) {
+            eggCounter++;
+            eggsFound[msg.sender] += 1;
+-           eggNFT.mintEgg(msg.sender, eggCounter);
++           bool success = eggNFT.mintEgg(msg.sender, eggCounter);
++           assert(success);
+            emit EggFound(msg.sender, eggCounter, eggsFound[msg.sender]);
+        }
+    }
+```
+
+### Likelihood & Impact:
+
+- Impact: MEDIUM/HIGH
+- Likelihood: MEDIUM
+- Severity: MEDIUM
+
 # Low
 
-### [L-1] Missing Event Logging, become difficult when debugging and monitoring
+### [L-1] Missing Event Logging, become difficult when debugging and monitoring (Submitted)
 
 **Description:** The contract lacks event emission for critical state changes. Events are essential for tracking contract activity, debugging, and off-chain indexing.
 
@@ -74,7 +180,7 @@ More reference: https://solodit.cyfrin.io/issues/hal-03-lack-of-event-emission-h
 
 1. The `EggstravaganzaNFT::setGameContract` function updates `EggstravaganzaNFT::gameContract` variable without emitting an event:
 
-```javascript
+```Solidity
     /// @notice Only the owner can set the game contract allowed to mint eggs.
     function setGameContract(address _gameContract) external onlyOwner {
         require(_gameContract != address(0), "Invalid game contract address");
@@ -84,7 +190,7 @@ More reference: https://solodit.cyfrin.io/issues/hal-03-lack-of-event-emission-h
 
 2. The `EggstravaganzaNFT::mintEgg` function mints an NFT but does not log the event:
 
-```javascript
+```Solidity
     /// @notice Public function to mint a new Eggstravaganza NFT.
     /// Only the approved game contract can mint eggs.
     function mintEgg(address to, uint256 tokenId) external returns (bool) {
@@ -97,7 +203,7 @@ More reference: https://solodit.cyfrin.io/issues/hal-03-lack-of-event-emission-h
 
 3. The `EggVault::setEggNFT` function set the NFT contract address without emitting an event:
 
-```javascript
+```Solidity
     /// @notice Set the NFT contract address.
     function setEggNFT(address _eggNFTAddress) external onlyOwner {
         require(_eggNFTAddress != address(0), "Invalid NFT address");
@@ -161,7 +267,7 @@ More reference: https://solodit.cyfrin.io/issues/hal-03-lack-of-event-emission-h
 
 - src/EggVault.sol:
 
-```javascript
+```Solidity
     function depositEgg(uint256 tokenId, address depositor) public {
 .
 .
@@ -200,7 +306,7 @@ https://solodit.cyfrin.io/issues/n-01-use-of-floating-pragma-code4rena-rubicon-r
 
 **Proof of Concept:** There are 3 different smart contracts, each using a Floating Pragma
 
-```javascript
+```Solidity
     // src/EggstravaganzaNFT.sol
     pragma solidity ^0.8.23;
 

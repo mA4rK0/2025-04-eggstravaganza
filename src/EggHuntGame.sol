@@ -21,6 +21,7 @@ contract EggHuntGame is Ownable {
     /// @notice Tracks the number of eggs found per participant.
     mapping(address => uint256) public eggsFound;
     /// @notice Global counter for minted egg token IDs.
+    // @audit-info Uninitialized State Variables
     uint256 public eggCounter;
 
     /// @notice Chance (in percent) to find an egg on each search attempt.
@@ -57,6 +58,7 @@ contract EggHuntGame is Ownable {
 
     /// @notice Allows the owner to adjust the egg-finding chance.
     function setEggFindThreshold(uint256 newThreshold) external onlyOwner {
+        // @audit-info Magic Number
         require(newThreshold <= 100, "Threshold must be <= 100");
         eggFindThreshold = newThreshold;
     }
@@ -69,12 +71,14 @@ contract EggHuntGame is Ownable {
         require(block.timestamp <= endTime, "Game ended");
 
         // Pseudo-random number generation (for demonstration purposes only)
+        // @audit-high Weak Randomness
         uint256 random =
             uint256(keccak256(abi.encodePacked(block.timestamp, block.prevrandao, msg.sender, eggCounter))) % 100;
 
         if (random < eggFindThreshold) {
             eggCounter++;
             eggsFound[msg.sender] += 1;
+            // @audit-medium Unused return
             eggNFT.mintEgg(msg.sender, eggCounter);
             emit EggFound(msg.sender, eggCounter, eggsFound[msg.sender]);
         }
