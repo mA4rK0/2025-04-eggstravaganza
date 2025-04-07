@@ -15,7 +15,9 @@ contract EggHuntGame is Ownable {
     bool public gameActive;
 
     /// @notice References to the EggstravaganzaNFT and EggVault contracts.
+    // @audit-low should be immutable
     EggstravaganzaNFT public eggNFT;
+    // @audit-low should be immutable
     EggVault public eggVault;
 
     /// @notice Tracks the number of eggs found per participant.
@@ -60,6 +62,7 @@ contract EggHuntGame is Ownable {
     function setEggFindThreshold(uint256 newThreshold) external onlyOwner {
         // @audit-info Magic Number
         require(newThreshold <= 100, "Threshold must be <= 100");
+        // @audit-low there is no event logging
         eggFindThreshold = newThreshold;
     }
 

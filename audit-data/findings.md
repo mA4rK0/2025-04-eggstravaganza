@@ -211,6 +211,15 @@ More reference: https://solodit.cyfrin.io/issues/hal-03-lack-of-event-emission-h
     }
 ```
 
+4. The `EggHuntGame::setEggFindThreshold` function set the new find threshold without emitting an event:
+
+```Solidity
+    function setEggFindThreshold(uint256 newThreshold) external onlyOwner {
+        require(newThreshold <= 100, "Threshold must be <= 100");
+@>      eggFindThreshold = newThreshold;
+    }
+```
+
 **Recommended Mitigation:** Introduce event logging for critical state changes to improve contract transparency and traceability. Modify the functions to emit these events and add the following event declarations:
 
 1. src/EggstravaganzaNFT.sol:
@@ -249,6 +258,50 @@ More reference: https://solodit.cyfrin.io/issues/hal-03-lack-of-event-emission-h
         eggNFT = EggstravaganzaNFT(_eggNFTAddress);
 +       emit EggNFTSet(_eggNFTAddress);
     }
+```
+
+3. src/EggHuntGame.sol:
+
+```diff
++   event EggFindThresholdUpdated(uint256 newThreshold);
+.
+.
+.
+    function setEggFindThreshold(uint256 newThreshold) external onlyOwner {
+        require(newThreshold <= 100, "Threshold must be <= 100");
+        eggFindThreshold = newThreshold;
++       emit EggFindThresholdUpdated(newThreshold);
+    }
+```
+
+### Likelihood & Impact:
+
+- Impact: LOW
+- Likelihood: HIGH
+- Severity: LOW
+
+### [L-2] Mutable Reference to External Contract (Missed `immutable` Keyword), more gas cost per access (Submitted)
+
+**Description:** The `EggHuntGame::eggNFT` and `EggHuntGame::eggVault` variables are assigned once in the constructor and never updated afterward. These references are ideal candidates for the `immutable` keyword.
+
+**Impact:** Slightly higher gas cost per access and reduced clarity for readers and auditors.
+
+**Proof of Concept:**
+
+Proof of Code:
+
+```Solidity
+    EggstravaganzaNFT public eggNFT;
+    EggVault public eggVault;
+```
+
+**Recommended Mitigation:** Mark `EggHuntGame::eggNFT` and `EggHuntGame::eggVault` variables as `immutable`.
+
+```diff
+-   EggstravaganzaNFT public eggNFT;
+-   EggVault public eggVault;
++   EggstravaganzaNFT public immutable eggNFT;
++   EggVault public immutable eggVault;
 ```
 
 ### Likelihood & Impact:
